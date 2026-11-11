@@ -22,14 +22,6 @@ Cloudflare connects **outward** to the vendor cloud every minute. The P210 keeps
 
 The cloud protocol is based on the community [fossibot-ha integration](https://github.com/ldiogoz/fossibot-ha), which connects to BrightEMS cloud and reads Modbus registers over vendor MQTT. The P210 has returned both input and settings registers through this route. The protected controls use a narrow allowlist and require a fresh settings read before writing; live writes still need to be checked against the phone app. A [different community bridge warns](https://github.com/tkaufmann/fossibot-mqtt-bridge#status-and-limitations) that another login on the same account may sign the phone app out. A dedicated BrightEMS email/password account with the P210 shared to it is preferable if the app supports sharing.
 
-## Steps to finish
-
-1. Leave the PC off for a short safe period, then confirm the Cloudflare history continued updating. The account secrets are installed in Cloudflare, outside the repository; the local receiver is disabled.
-2. Compare all available BrightEMS fields against the saved raw registers, especially AC/grid presence, faults, individual ports, and the device's own remaining-time field. The current site shows charge, total/source input, total output, power-flow state, and a rough ETA.
-3. Display every verified reported field and mark absent fields as unavailable. The collector Worker saves all 80 input registers and tries a separate read-only request for 86 settings/holding registers. Its runtime figure uses the P210's rated 2048 Wh capacity and current load; compare it with actual discharge behaviour before relying on it.
-4. Check the charge and power history graphs, stale-data handling, and the 15% tray notification during a safe discharge test. The tray never shuts down Windows automatically.
-5. Set a suitable history retention/export policy after observing sample volume. Check Cloudflare D1 usage and Worker failures in the dashboard.
-
 ## Existing pieces
 
 | Part | Location | State |
