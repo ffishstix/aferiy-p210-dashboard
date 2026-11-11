@@ -1,0 +1,18 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "aferiy-p210-monitor",
+  "pages_build_output_dir": "./public",
+  "compatibility_date": "2026-11-10",
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "aferiy-p210-monitor",
+      "database_id": "64fb127d-85f5-4484-8c61-06230bc8b01f",
+      "preview_database_id": "DB"
+    }
+  ],
+  "services": [{
+    "binding": "CONTROL_WORKER",
+    "service": "aferiy-p210-cloud-collector"
+  }]
+}

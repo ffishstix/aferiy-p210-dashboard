@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#101820">
+  <title>Battery watch · AFERIY P210</title>
+  <link rel="stylesheet" href="/style.css">
+  <script src="/app.js" defer></script>
+  <script src="/controls.js" defer></script>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand"><span class="brand-icon">↯</span><span><strong>Battery watch</strong><small>AFERIY P210</small></span></div>
+    <div class="top-actions"><span id="connection" class="connection">Waiting for data</span><a class="ghost" href="/download.html">Windows app</a><button id="compact-toggle" class="ghost" type="button">Compact view</button></div>
+  </header>
+
+  <main>
+    <div id="dashboard">
+      <section class="hero">
+        <div class="hero-main"><div class="eyebrow">LIVE STATUS <span class="separator">/</span> <span id="last-update">NO READING YET</span></div><h1 id="state-title">Waiting for battery data</h1><p id="state-detail">Cloud collection is connecting to BrightEMS.</p></div>
+        <div class="battery-visual" aria-label="Battery charge"><div class="battery-top"></div><div class="battery-shell"><div id="battery-fill" class="battery-fill"></div><span id="charge-big">—</span><small>CHARGE</small></div></div>
+      </section>
+
+      <section class="metrics" aria-label="Current measurements">
+        <article class="metric"><div class="metric-head"><span>POWER IN</span><span class="metric-icon">↙</span></div><div class="metric-number"><span id="input">—</span><small>W</small></div><p id="input-detail">No reading yet</p></article>
+        <article class="metric"><div class="metric-head"><span>POWER OUT</span><span class="metric-icon">↗</span></div><div class="metric-number"><span id="output">—</span><small>W</small></div><p>Current load</p></article>
+        <article class="metric"><div class="metric-head"><span>TIME REMAINING</span><span class="metric-icon">◷</span></div><div class="metric-number time" id="remaining">—</div><p id="remaining-detail">Battery estimate</p></article>
+        <article class="metric"><div class="metric-head"><span>GRID INPUT</span><span class="metric-icon">⌁</span></div><div class="metric-number word" id="grid">—</div><p>Mains detected by P210</p></article>
+      </section>
+
+      <section class="history-panel">
+        <div class="section-heading"><div><div class="eyebrow">HISTORY</div><h2>Charge over time</h2></div><div class="range" aria-label="History range"><button data-hours="1">1H</button><button data-hours="24" class="selected">24H</button><button data-hours="168">7D</button><button data-hours="720">30D</button></div></div>
+        <div class="chart-wrap"><div class="chart-axis"><span>100%</span><span>50%</span><span>0%</span></div><svg id="chart" viewBox="0 0 1000 240" preserveAspectRatio="none" role="img" aria-label="Battery charge history"><path class="grid-line" d="M0 0H1000 M0 120H1000 M0 239H1000"></path><path id="chart-area" class="chart-area"></path><path id="chart-line" class="chart-line"></path></svg><div id="chart-empty" class="chart-empty">History will appear after the first cloud reading.</div></div>
+        <div class="chart-footer"><span id="range-start">—</span><span id="range-end">—</span></div>
+      </section>
+
+      <section class="history-panel power-panel">
+        <div class="section-heading"><div><div class="eyebrow">HISTORY</div><h2>Power flow over time</h2></div><div class="power-legend"><span class="power-in">Input</span><span class="power-out">Output</span></div></div>
+        <div class="chart-wrap"><div class="chart-axis"><span id="power-max">—</span><span id="power-mid">—</span><span>0 W</span></div><svg viewBox="0 0 1000 240" preserveAspectRatio="none" role="img" aria-label="Input and output power history"><path class="grid-line" d="M0 0H1000 M0 120H1000 M0 239H1000"></path><path id="power-input-line" class="chart-line input-line"></path><path id="power-output-line" class="chart-line output-line"></path></svg><div id="power-empty" class="chart-empty">Power history will appear after the first cloud reading.</div></div>
+        <div class="chart-footer"><span id="power-range-start">—</span><span id="power-range-end">—</span></div>
+      </section>
+
+      <section class="footer-grid"><article><div class="eyebrow">DEVICE HEALTH</div><h3 id="health-title">No data yet</h3><p id="health-detail">Connection information will appear after the first reading.</p></article><article><div class="eyebrow">LOW BATTERY</div><h3>Save work below 15%</h3><p>The Windows tray worker will show a prominent reminder when fresh readings show the battery is discharging below 15%.</p></article></section>
+      <section class="controls-panel" aria-labelledby="controls-title">
+        <div class="controls-heading"><div><div class="eyebrow">PROTECTED CONTROLS</div><h2 id="controls-title">Battery settings</h2><p>Sign in to change outputs and settings. Status and history above remain public.</p></div><button id="controls-logout" class="ghost" type="button" hidden>Sign out</button></div>
+        <form id="controls-login" class="controls-login"><label for="controls-password">Control password</label><div class="login-row"><input id="controls-password" type="password" autocomplete="current-password" required><button type="submit">Sign in</button></div></form>
+        <div id="controls-session" hidden><div class="controls-toolbar"><span id="controls-updated">—</span><button id="controls-refresh" class="ghost" type="button">Refresh settings</button></div><div id="controls-fields" class="controls-fields"></div></div>
+        <p id="controls-message" class="controls-message" role="status" aria-live="polite"></p>
+      </section>
+    </div>
+  </main>
+  <footer>Battery watch <span>•</span> Public monitoring, protected controls <span>•</span> Times shown in your local time zone</footer>
+</body>
+</html>
+

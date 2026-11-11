@@ -1,0 +1,22 @@
+# Local credentials and machine state
+.env
+.env.*
+*.secret
+secrets/
+credentials/
+*.db
+*.db-*
+*.sqlite
+*.sqlite-*
+.wrangler/
+.wrangler-dry-run/
+node_modules/
+.venv/
+__pycache__/
+*.pyc
+dist/
+desktop/bin/
+desktop/obj/
+desktop/ReleaseTool/bin/
+desktop/ReleaseTool/obj/
+
