@@ -7,6 +7,7 @@ export async function onRequestGet({ request, env }) {
   const rows = await env.DB.prepare(`SELECT MIN(recorded_at) AS recorded_at,
     AVG(charge_percent) AS charge_percent, AVG(input_w) AS input_w,
     AVG(output_w) AS output_w, AVG(remaining_minutes) AS remaining_minutes,
+    AVG(json_extract(raw_json, '$.batteryVoltageV')) AS battery_voltage_v,
     MAX(grid_present) AS grid_present, MAX(discharging) AS discharging,
     MAX(fault) AS fault
     FROM telemetry WHERE recorded_at >= ?
@@ -14,4 +15,3 @@ export async function onRequestGet({ request, env }) {
     ORDER BY recorded_at ASC LIMIT 2000`).bind(since, bucketSeconds).all();
   return json({ hours, bucketSeconds, samples: rows.results });
 }
-
