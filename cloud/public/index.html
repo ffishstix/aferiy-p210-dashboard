@@ -26,7 +26,6 @@
         <article class="metric"><div class="metric-head"><span>POWER IN</span><span class="metric-icon">↙</span></div><div class="metric-number"><span id="input">—</span><small>W</small></div><p id="input-detail">No reading yet</p><p id="battery-detail" class="metric-subdetail">Farm battery voltage unavailable</p><p id="flow-detail" class="metric-subdetail">Power split unavailable</p></article>
         <article class="metric"><div class="metric-head"><span>POWER OUT</span><span class="metric-icon">↗</span></div><div class="metric-number"><span id="output">—</span><small>W</small></div><p>Current load / general use</p></article>
         <article class="metric"><div class="metric-head"><span>TIME REMAINING</span><span class="metric-icon">◷</span></div><div class="metric-number time" id="remaining">—</div><p id="remaining-detail">Battery estimate</p></article>
-        <article class="metric"><div class="metric-head"><span>GRID INPUT</span><span class="metric-icon">⌁</span></div><div class="metric-number word" id="grid">—</div><p id="grid-detail">Mains detected by P210</p></article>
         <article class="metric"><div class="metric-head"><span>FARM STATE</span><span class="metric-icon">↔</span></div><div class="metric-number word" id="farm-state">—</div><p id="farm-detail">Waiting for power flow</p></article>
       </section>
 
@@ -37,8 +36,8 @@
       </section>
 
       <section class="history-panel power-panel">
-        <div class="section-heading"><div><div class="eyebrow">HISTORY</div><h2>Power flow over time</h2></div><div class="power-legend"><span class="power-in">Input</span><span class="power-out">Output</span></div></div>
-        <div class="chart-wrap"><div class="chart-axis"><span id="power-max">—</span><span id="power-mid">—</span><span>0 W</span></div><svg viewBox="0 0 1000 240" preserveAspectRatio="none" role="img" aria-label="Input and output power history"><path class="grid-line" d="M0 0H1000 M0 120H1000 M0 239H1000"></path><path id="power-input-line" class="chart-line input-line"></path><path id="power-output-line" class="chart-line output-line"></path></svg><div id="power-empty" class="chart-empty">Power history will appear after the first cloud reading.</div></div>
+        <div class="section-heading"><div><div class="eyebrow">FARM INFORMATION</div><h2>Power flow over time</h2></div><div class="power-legend"><span class="power-in">Input</span><span class="power-out">Output</span><span class="power-battery">Farm battery</span></div></div>
+        <div class="chart-wrap power-chart-wrap"><div class="chart-axis"><span id="power-max">—</span><span id="power-mid">—</span><span>0 W</span></div><svg viewBox="0 0 1000 240" preserveAspectRatio="none" role="img" aria-label="Farm power and battery history"><path class="grid-line" d="M0 0H1000 M0 120H1000 M0 239H1000"></path><path id="power-input-line" class="chart-line input-line"></path><path id="power-output-line" class="chart-line output-line"></path><path id="power-battery-line" class="chart-line battery-line"></path></svg><div class="chart-axis power-secondary-axis"><span>100%</span><span>50%</span><span>0%</span></div><div id="power-empty" class="chart-empty">Farm history will appear after the first cloud reading.</div></div>
         <div class="chart-footer"><span id="power-range-start">—</span><span id="power-range-end">—</span></div>
       </section>
 
