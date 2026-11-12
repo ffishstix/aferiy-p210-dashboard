@@ -6,7 +6,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <AssemblyName>BatteryWatch</AssemblyName>
-    <Version>1.2.5</Version>
+    <Version>1.2.6</Version>
   </PropertyGroup>
   <ItemGroup>
     <EmbeddedResource Include="update-public.pem" />

@@ -56,7 +56,7 @@ internal static class Program
             if (PlugAdvice.Evaluate(new Sample { RecordedAt = fresh, AcInputW = 500 }, new FarmSample { RecordedAt = fresh, SolarW = 100, MainBatteryW = -200 }) != "off") Environment.Exit(1);
             if (PlugAdvice.Evaluate(new Sample { RecordedAt = fresh.AddMinutes(-3), AcInputW = 500 }, new FarmSample { RecordedAt = fresh, MainBatteryW = -200 }) != null) Environment.Exit(1);
             ApplicationConfiguration.Initialize();
-            using var view = new DockForm(() => { }, () => { }, () => { }, () => { }, _ => { }, false);
+            using var view = new DockForm(() => { }, () => { }, () => { }, () => { }, () => { }, _ => { }, false);
             view.UpdateReading(new Sample { ChargePercent = 29, InputW = 450, OutputW = 151, RecordedAt = DateTimeOffset.UtcNow }, "charging", false);
             _ = view.Handle;
             var previewPath = Environment.GetEnvironmentVariable("BATTERY_WATCH_PREVIEW");
@@ -86,6 +86,21 @@ internal static class Program
                 controlView.DrawToBitmap(preview, new Rectangle(0, 0, controlView.Width, controlView.Height));
                 preview.Save(controlPreviewPath);
                 controlView.Hide();
+            }
+            using var farmView = new FarmControlsForm(previewClient);
+            farmView.PreviewSettings();
+            _ = farmView.Handle;
+            var farmPreviewPath = Environment.GetEnvironmentVariable("BATTERY_WATCH_FARM_PREVIEW");
+            if (!string.IsNullOrWhiteSpace(farmPreviewPath))
+            {
+                farmView.StartPosition = FormStartPosition.Manual;
+                farmView.Location = new Point(-2000, -2000);
+                farmView.Show();
+                Application.DoEvents();
+                using var preview = new Bitmap(farmView.Width, farmView.Height);
+                farmView.DrawToBitmap(preview, new Rectangle(0, 0, farmView.Width, farmView.Height));
+                preview.Save(farmPreviewPath);
+                farmView.Hide();
             }
             Environment.Exit(0);
         }
@@ -233,6 +248,7 @@ internal sealed class BatteryApp : ApplicationContext
     private readonly NotifyIcon tray;
     private readonly DockForm dock;
     private readonly ControlsForm controls;
+    private readonly FarmControlsForm farmControls;
     private readonly System.Windows.Forms.Timer timer;
     private readonly System.Windows.Forms.Timer updateTimer;
     private string? password;
@@ -253,7 +269,8 @@ internal sealed class BatteryApp : ApplicationContext
         client = new HttpClient(new HttpClientHandler { CookieContainer = cookies }) { BaseAddress = new Uri(Program.DashboardUrl), Timeout = TimeSpan.FromSeconds(40) };
         password = SecretStore.Read();
         controls = new ControlsForm(client);
-        dock = new DockForm(() => _ = RefreshAsync(true), () => OpenWebsite(Program.DashboardUrl), ShowControls, Uninstall, SetStartup, StartupEnabled());
+        farmControls = new FarmControlsForm(client);
+        dock = new DockForm(() => _ = RefreshAsync(true), () => OpenWebsite(Program.DashboardUrl), ShowControls, ShowFarmControls, Uninstall, SetStartup, StartupEnabled());
         _ = dock.Handle;
         dock.FormClosed += (_, _) => ExitThread();
         tray = new NotifyIcon
@@ -265,6 +282,7 @@ internal sealed class BatteryApp : ApplicationContext
         };
         tray.ContextMenuStrip.Items.Add("Show battery details", null, (_, _) => ToggleDock());
         tray.ContextMenuStrip.Items.Add("Battery controls", null, (_, _) => ShowControls());
+        tray.ContextMenuStrip.Items.Add("Farm settings", null, (_, _) => ShowFarmControls());
         tray.ContextMenuStrip.Items.Add("Open website", null, (_, _) => OpenWebsite(Program.DashboardUrl));
         tray.ContextMenuStrip.Items.Add("Change control password", null, (_, _) => ChangePassword());
         tray.ContextMenuStrip.Items.Add("Check for updates", null, async (_, _) => await CheckForUpdatesAsync(true));
@@ -285,14 +303,24 @@ internal sealed class BatteryApp : ApplicationContext
     private static void OpenWebsite(string url) => Process.Start(new ProcessStartInfo(url) { UseShellExecute = true });
 
     private void ToggleDock() { if (dock.Visible) dock.Hide(); else ShowDock(); }
-    private void ShowDock() { controls.Hide(); dock.PositionBottomRight(); dock.Show(); dock.Activate(); }
+    private void ShowDock() { controls.Hide(); farmControls.Hide(); dock.PositionBottomRight(); dock.Show(); dock.Activate(); }
 
     private void ShowControls()
     {
         dock.Hide();
+        farmControls.Hide();
         controls.PositionBottomRight();
         controls.Show(); controls.Activate();
         _ = controls.RefreshAsync();
+    }
+
+    private void ShowFarmControls()
+    {
+        dock.Hide();
+        controls.Hide();
+        farmControls.PositionBottomRight();
+        farmControls.Show(); farmControls.Activate();
+        _ = farmControls.RefreshAsync();
     }
 
     private async Task CheckForUpdatesAsync(bool reportCurrent = false)
@@ -505,7 +533,7 @@ internal sealed class BatteryApp : ApplicationContext
         updateTimer.Stop(); updateTimer.Dispose();
         timer.Stop(); timer.Dispose();
         tray.Visible = false; tray.Icon?.Dispose(); tray.Dispose();
-        controls.Dispose(); dock.Dispose(); client.Dispose();
+        controls.Dispose(); farmControls.Dispose(); dock.Dispose(); client.Dispose();
         base.ExitThreadCore();
     }
 }

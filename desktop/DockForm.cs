@@ -19,18 +19,20 @@ internal sealed class DockForm : Form
     private readonly Action onRefresh;
     private readonly Action onWebsite;
     private readonly Action onControls;
+    private readonly Action onFarmControls;
     private readonly Action onUninstall;
     private readonly Action<bool> onStartup;
     private bool ready;
 
-    public DockForm(Action onRefresh, Action onWebsite, Action onControls, Action onUninstall, Action<bool> onStartup, bool startupEnabled)
+    public DockForm(Action onRefresh, Action onWebsite, Action onControls, Action onFarmControls, Action onUninstall, Action<bool> onStartup, bool startupEnabled)
     {
         this.onRefresh = onRefresh;
         this.onWebsite = onWebsite;
         this.onControls = onControls;
+        this.onFarmControls = onFarmControls;
         this.onUninstall = onUninstall;
         this.onStartup = onStartup;
-        Width = 372; Height = 606;
+        Width = 372; Height = 648;
         FormBorderStyle = FormBorderStyle.None;
         ShowInTaskbar = false;
         TopMost = true;
@@ -63,14 +65,15 @@ internal sealed class DockForm : Form
 
         var controls = Button("Battery controls  →", 24, 469, 320, 39, onControls);
         controls.BackColor = Color.FromArgb(184, 239, 143); controls.ForeColor = Color.FromArgb(19, 46, 34);
-        var web = Button("Open dashboard ↗", 24, 519, 178, 35, onWebsite);
-        var refresh = Button("Refresh", 212, 519, 132, 35, onRefresh);
-        Controls.AddRange([controls, web, refresh]);
+        var farmControls = Button("Farm settings  →", 24, 513, 320, 39, onFarmControls);
+        var web = Button("Open dashboard ↗", 24, 563, 178, 35, onWebsite);
+        var refresh = Button("Refresh", 212, 563, 132, 35, onRefresh);
+        Controls.AddRange([controls, farmControls, web, refresh]);
         startup.Text = "Start with Windows"; startup.Checked = startupEnabled; startup.AutoSize = true;
-        startup.ForeColor = Color.FromArgb(165, 184, 185); startup.Location = new Point(24, 571);
+        startup.ForeColor = Color.FromArgb(165, 184, 185); startup.Location = new Point(24, 613);
         startup.CheckedChanged += (_, _) => { if (ready) onStartup(startup.Checked); };
         Controls.Add(startup);
-        var uninstall = Button("Uninstall", 266, 566, 78, 27, onUninstall);
+        var uninstall = Button("Uninstall", 266, 608, 78, 27, onUninstall);
         uninstall.ForeColor = Color.FromArgb(246, 167, 162);
         Controls.Add(uninstall);
         ready = true;
