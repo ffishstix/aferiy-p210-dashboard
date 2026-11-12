@@ -3,6 +3,8 @@ let currentHours = 24;
 let timer;
 let refreshing = false;
 const CHARGE_TARGET = 95;
+const FARM_BATTERY_MIN_V = 42;
+const FARM_BATTERY_MAX_V = 55.5;
 if (new URLSearchParams(location.search).get('compact') === '1') document.body.classList.add('compact');
 
 const value = (v, digits = 0) => v == null ? '—' : Number(v).toFixed(digits);
@@ -27,6 +29,11 @@ function chargeRateMinutes(samples, charge) {
   return (CHARGE_TARGET - Number(charge)) / (gained / elapsedMinutes);
 }
 
+function farmBatteryFromVoltage(voltage) {
+  if (voltage == null || !Number.isFinite(Number(voltage))) return null;
+  return Math.max(0, Math.min(100, (Number(voltage) - FARM_BATTERY_MIN_V) / (FARM_BATTERY_MAX_V - FARM_BATTERY_MIN_V) * 100));
+}
+
 function renderStatus({ sample: s, status }, historySamples = []) {
   const titles = { no_data: 'Waiting for battery data', stale: 'Connection needs attention', fault: 'Battery fault reported', discharging: 'Running on battery', charging: 'Battery charging', passthrough: 'Power passing through', idle: 'Battery standing by' };
   $('state-title').textContent = titles[status] || 'Battery status';
@@ -46,9 +53,12 @@ function renderStatus({ sample: s, status }, historySamples = []) {
   const input = s?.input_w == null ? null : Number(s.input_w);
   const output = s?.output_w == null ? null : Number(s.output_w);
   const net = input == null || output == null ? null : input - output;
+  const farmBatteryVoltage = s?.battery_voltage_v == null ? null : Number(s.battery_voltage_v);
+  const farmBatteryPercent = farmBatteryFromVoltage(farmBatteryVoltage);
   $('input').textContent = value(input); $('output').textContent = value(output);
   $('input-detail').textContent = s?.ac_input_w != null || s?.dc_input_w != null ? `AC ${value(s.ac_input_w)} W · DC ${value(s.dc_input_w)} W` : 'All input sources';
   $('flow-detail').textContent = input == null || output == null ? 'Power split unavailable' : `To battery ${value(Math.max(0, net))} W · General use ${value(Math.max(0, output))} W`;
+  $('battery-detail').textContent = farmBatteryPercent == null ? 'Farm battery voltage unavailable' : `Farm battery ${Math.round(farmBatteryPercent)}% · ${farmBatteryVoltage.toFixed(1)} V`;
   $('farm-state').textContent = net == null ? '—' : net > 25 ? 'Excess' : net < -25 ? 'Deficit' : 'Balanced';
   $('farm-detail').textContent = net == null ? 'Waiting for power flow' : net > 25 ? `${value(net)} W available after loads` : net < -25 ? `${value(Math.abs(net))} W supplied by battery` : 'Input and load are closely matched';
 
