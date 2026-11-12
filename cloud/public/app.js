@@ -289,23 +289,28 @@ function setupChartInspection(svg) {
 async function refresh(fresh = false) {
   if (refreshing) { pendingRefresh = true; return; }
   refreshing = true;
-  const statusRequest = get(fresh ? '/api/status?fresh=1' : '/api/status').catch(() => null);
-  const historyRequest = get(`/api/history?${historyQuery()}&at=${Date.now()}`).catch(() => null);
-  const farmRequest = get(`/api/farm/status?at=${Date.now()}`).catch(() => null);
-  const farmHistoryRequest = get(`/api/farm/history?${historyQuery()}&at=${Date.now()}`).catch(() => null);
-  const status = await statusRequest, history = await historyRequest;
-  if (status) renderStatus(status);
-  else { $('connection').textContent = fresh ? 'Fresh reading unavailable' : 'Website unavailable'; $('connection').className = 'connection warning'; }
-  if (history) { renderChart(history); renderPowerChart(history); }
-  try {
-    const farm = await farmRequest;
-    if (!farm) throw new Error('Farm status unavailable');
-    renderFarm(farm);
-  }
-  catch { $('farm-connection').textContent = 'Farm reading unavailable'; $('farm-connection').className = 'connection warning'; }
-  const farmHistory = await farmHistoryRequest;
-  if (farmHistory) renderFarmChart(farmHistory);
-  else { $('farm-empty').hidden = false; $('farm-empty').textContent = 'Farm history is unavailable right now.'; }
+  const query = `${historyQuery()}&at=${Date.now()}`;
+  await Promise.all([
+    get('/api/status').then(status => {
+      renderStatus(status);
+      if (fresh) void get('/api/status?fresh=1').then(renderStatus).catch(() => {});
+    }).catch(() => {
+      $('connection').textContent = 'Website unavailable';
+      $('connection').className = 'connection warning';
+    }),
+    get(`/api/history?${query}`).then(history => {
+      renderChart(history);
+      renderPowerChart(history);
+    }).catch(() => {}),
+    get(`/api/farm/status?at=${Date.now()}`).then(renderFarm).catch(() => {
+      $('farm-connection').textContent = 'Farm reading unavailable';
+      $('farm-connection').className = 'connection warning';
+    }),
+    get(`/api/farm/history?${query}`).then(renderFarmChart).catch(() => {
+      $('farm-empty').hidden = false;
+      $('farm-empty').textContent = 'Farm history is unavailable right now.';
+    }),
+  ]);
   refreshing = false;
   if (pendingRefresh) { pendingRefresh = false; void refresh(); }
 }
