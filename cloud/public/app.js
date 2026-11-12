@@ -66,9 +66,6 @@ function renderStatus({ sample: s, status }, historySamples = []) {
   $('remaining').textContent = status === 'charging' ? exactCharge >= CHARGE_TARGET ? 'Target reached' : clock(chargingMinutes) === '—' ? 'Calculating' : clock(chargingMinutes) : status === 'discharging' ? clock(s?.remaining_minutes) : status === 'idle' || status === 'passthrough' ? 'On standby' : '—';
   $('remaining-detail').textContent = status === 'stale' ? 'Last reading is old' : status === 'charging' ? `Estimated time until ${CHARGE_TARGET}%` : status === 'discharging' ? 'Rough estimate at the current load' : status === 'idle' || status === 'passthrough' ? 'No active charge or discharge estimate' : 'Battery estimate';
 
-  const gridPresent = s?.grid_present == null ? (s?.ac_input_w != null && Number(s.ac_input_w) > 1 ? true : null) : Boolean(s.grid_present);
-  $('grid').textContent = gridPresent == null ? '—' : gridPresent ? 'Present' : 'Absent';
-  $('grid-detail').textContent = s?.grid_present == null && gridPresent ? 'Inferred from AC input' : 'Mains detected by P210';
   $('health-title').textContent = status === 'no_data' ? 'No data yet' : status === 'stale' ? 'Reading is stale' : status === 'fault' ? 'Fault reported' : 'Receiving readings';
   $('health-detail').textContent = s ? `Last received ${when(s.received_at)}.` : 'Connection information will appear after the first reading.';
 }
@@ -93,7 +90,7 @@ function renderChart(samples, hours) {
 }
 
 function renderPowerChart(samples, hours) {
-  const points = samples.filter(s => Number.isFinite(Date.parse(s.recorded_at)) && (s.input_w != null || s.output_w != null));
+  const points = samples.filter(s => Number.isFinite(Date.parse(s.recorded_at)) && (s.input_w != null || s.output_w != null || s.battery_voltage_v != null));
   $('power-empty').hidden = points.length > 0;
   $('power-range-start').textContent = when(new Date(Date.now() - hours * 3600000).toISOString());
   $('power-range-end').textContent = when(new Date().toISOString());
@@ -114,6 +111,17 @@ function renderPowerChart(samples, hours) {
     }
     $(element).setAttribute('d', path);
   }
+  let batteryPath = '', previousBatteryTime = null;
+  for (const point of points) {
+    const batteryPercent = farmBatteryFromVoltage(point.battery_voltage_v);
+    if (batteryPercent == null) { previousBatteryTime = null; continue; }
+    const time = Date.parse(point.recorded_at);
+    const x = Math.max(0, Math.min(1000, (time - start) / width * 1000));
+    const y = 240 - batteryPercent / 100 * 240;
+    batteryPath += `${previousBatteryTime === null || time - previousBatteryTime > Math.max(120000, width / 50) ? 'M' : 'L'}${x.toFixed(1)} ${y.toFixed(1)} `;
+    previousBatteryTime = time;
+  }
+  $('power-battery-line').setAttribute('d', batteryPath);
 }
 
 async function get(url) {
