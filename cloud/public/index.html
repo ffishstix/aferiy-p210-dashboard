@@ -8,6 +8,7 @@
   <link rel="stylesheet" href="/style.css">
   <script src="/app.js" defer></script>
   <script src="/controls.js" defer></script>
+  <script src="/optics-controls.js" defer></script>
 </head>
 <body>
   <header class="topbar">
@@ -19,25 +20,42 @@
     <div id="dashboard">
       <section class="hero">
         <div class="hero-main"><div class="eyebrow">LIVE STATUS <span class="separator">/</span> <span id="last-update">NO READING YET</span></div><h1 id="state-title">Waiting for battery data</h1><p id="state-detail">Cloud collection is connecting to BrightEMS.</p></div>
-        <div id="battery-visual" class="battery-visual" aria-label="Battery charge"><div class="battery-top"></div><div class="battery-shell"><div id="battery-fill" class="battery-fill"></div><span id="charge-big">—</span><small>CHARGE</small></div></div>
+        <div class="battery-visual" aria-label="Battery charge"><div class="battery-top"></div><div class="battery-shell"><div id="battery-fill" class="battery-fill"></div><span id="charge-big">—</span><small>CHARGE</small></div></div>
       </section>
 
       <section class="metrics" aria-label="Current measurements">
-        <article class="metric"><div class="metric-head"><span>POWER IN</span><span class="metric-icon">↙</span></div><div class="metric-number"><span id="input">—</span><small>W</small></div><p id="input-detail">No reading yet</p><p id="battery-detail" class="metric-subdetail">Farm battery voltage unavailable</p><p id="flow-detail" class="metric-subdetail">Power split unavailable</p></article>
-        <article class="metric"><div class="metric-head"><span>POWER OUT</span><span class="metric-icon">↗</span></div><div class="metric-number"><span id="output">—</span><small>W</small></div><p>Current load / general use</p></article>
+        <article class="metric"><div class="metric-head"><span>POWER IN</span><span class="metric-icon">↙</span></div><div class="metric-number"><span id="input">—</span><small>W</small></div><p id="input-detail">No reading yet</p></article>
+        <article class="metric"><div class="metric-head"><span>POWER OUT</span><span class="metric-icon">↗</span></div><div class="metric-number"><span id="output">—</span><small>W</small></div><p>Current load</p></article>
         <article class="metric"><div class="metric-head"><span>TIME REMAINING</span><span class="metric-icon">◷</span></div><div class="metric-number time" id="remaining">—</div><p id="remaining-detail">Battery estimate</p></article>
-        <article class="metric"><div class="metric-head"><span>FARM STATE</span><span class="metric-icon">↔</span></div><div class="metric-number word" id="farm-state">—</div><p id="farm-detail">Waiting for power flow</p></article>
+        <article class="metric"><div class="metric-head"><span>GRID INPUT</span><span class="metric-icon">⌁</span></div><div class="metric-number word" id="grid">—</div><p>Mains detected by P210</p></article>
+      </section>
+
+      <section class="farm-panel" aria-labelledby="farm-title">
+        <div class="section-heading"><div><div class="eyebrow">FARM POWER</div><h2 id="farm-title">Main batteries and inverters</h2></div><span id="farm-connection" class="connection">Waiting for farm readings</span></div>
+        <p id="farm-updated" class="farm-updated">The farm gateway has not sent a reading yet.</p>
+        <div class="farm-metrics">
+          <article><span>Solar</span><strong id="farm-solar">—</strong></article>
+          <article><span>Generator</span><strong id="farm-generator">—</strong></article>
+          <article><span>Main battery</span><strong id="farm-charge">—</strong><small id="farm-battery-flow">Power flow unavailable</small></article>
+          <article><span>Farm load</span><strong id="farm-load">—</strong><small id="farm-source">AC source unknown</small></article>
+        </div>
+        <div class="farm-history-heading"><div><div class="eyebrow">FARM HISTORY</div><h3>Where the power went</h3><p>Positive battery power charges the main bank; negative power drains it.</p></div><div class="farm-legend"><span class="farm-solar-key">Solar</span><span class="farm-generator-key">Generator</span><span class="farm-load-key">Load</span><span class="farm-battery-key">Main battery</span></div></div>
+        <form id="history-search" class="history-search"><label>From <input id="history-from" type="datetime-local" required></label><label>To <input id="history-to" type="datetime-local" required></label><button type="submit">Search time</button><button id="zoom-back" class="ghost" type="button" disabled>Back one zoom</button><button id="history-latest" class="ghost" type="button">Latest 24 hours</button></form>
+        <p id="history-search-message" class="history-search-message" role="status"></p>
+        <div class="chart-wrap farm-chart-wrap"><div class="chart-axis"><span id="farm-max">—</span><span>0 W</span><span id="farm-min">—</span></div><svg id="farm-chart" data-chart="farm" tabindex="0" viewBox="0 0 1000 240" preserveAspectRatio="none" role="img" aria-label="Farm solar, generator, load and main battery power history. Focus and use arrow keys to inspect readings."><path class="grid-line" d="M0 0H1000 M0 120H1000 M0 239H1000"></path><path id="farm-solar-line" class="chart-line farm-solar-line"></path><path id="farm-generator-line" class="chart-line farm-generator-line"></path><path id="farm-load-line" class="chart-line farm-load-line"></path><path id="farm-battery-line" class="chart-line farm-battery-line"></path></svg><div id="farm-empty" class="chart-empty">Farm history will appear after the first reading.</div></div>
+        <div class="chart-footer"><span id="farm-range-start">—</span><span id="farm-range-end">—</span></div>
+        <p class="chart-help">Drag across any graph to zoom into that time period. Hover, tap or focus a graph and use the arrow keys to inspect a reading. The selected range applies to all three graphs.</p>
       </section>
 
       <section class="history-panel">
         <div class="section-heading"><div><div class="eyebrow">HISTORY</div><h2>Charge over time</h2></div><div class="range" aria-label="History range"><button data-hours="1">1H</button><button data-hours="24" class="selected">24H</button><button data-hours="168">7D</button><button data-hours="720">30D</button></div></div>
-        <div class="chart-wrap"><div class="chart-axis"><span>100%</span><span>50%</span><span>0%</span></div><svg id="chart" viewBox="0 0 1000 240" preserveAspectRatio="none" role="img" aria-label="Battery charge history"><path class="grid-line" d="M0 0H1000 M0 120H1000 M0 239H1000"></path><path id="chart-area" class="chart-area"></path><path id="chart-line" class="chart-line"></path></svg><div id="chart-empty" class="chart-empty">History will appear after the first cloud reading.</div></div>
+        <div class="chart-wrap"><div class="chart-axis"><span>100%</span><span>50%</span><span>0%</span></div><svg id="chart" data-chart="charge" tabindex="0" viewBox="0 0 1000 240" preserveAspectRatio="none" role="img" aria-label="Battery charge history. Focus and use arrow keys to inspect readings."><path class="grid-line" d="M0 0H1000 M0 120H1000 M0 239H1000"></path><path id="chart-area" class="chart-area"></path><path id="chart-line" class="chart-line"></path></svg><div id="chart-empty" class="chart-empty">History will appear after the first cloud reading.</div></div>
         <div class="chart-footer"><span id="range-start">—</span><span id="range-end">—</span></div>
       </section>
 
       <section class="history-panel power-panel">
-        <div class="section-heading"><div><div class="eyebrow">FARM INFORMATION</div><h2>Power flow over time</h2></div><div class="power-legend"><span class="power-in">Input</span><span class="power-out">Output</span><span class="power-battery">Farm battery</span></div></div>
-        <div class="chart-wrap power-chart-wrap"><div class="chart-axis"><span id="power-max">—</span><span id="power-mid">—</span><span>0 W</span></div><svg viewBox="0 0 1000 240" preserveAspectRatio="none" role="img" aria-label="Farm power and battery history"><path class="grid-line" d="M0 0H1000 M0 120H1000 M0 239H1000"></path><path id="power-input-line" class="chart-line input-line"></path><path id="power-output-line" class="chart-line output-line"></path><path id="power-battery-line" class="chart-line battery-line"></path></svg><div class="chart-axis power-secondary-axis"><span>100%</span><span>50%</span><span>0%</span></div><div id="power-empty" class="chart-empty">Farm history will appear after the first cloud reading.</div></div>
+        <div class="section-heading"><div><div class="eyebrow">HISTORY</div><h2>Power flow over time</h2></div><div class="power-legend"><span class="power-in">Input</span><span class="power-out">Output</span></div></div>
+        <div class="chart-wrap"><div class="chart-axis"><span id="power-max">—</span><span id="power-mid">—</span><span>0 W</span></div><svg id="power-chart" data-chart="power" tabindex="0" viewBox="0 0 1000 240" preserveAspectRatio="none" role="img" aria-label="Input and output power history. Focus and use arrow keys to inspect readings."><path class="grid-line" d="M0 0H1000 M0 120H1000 M0 239H1000"></path><path id="power-input-line" class="chart-line input-line"></path><path id="power-output-line" class="chart-line output-line"></path></svg><div id="power-empty" class="chart-empty">Power history will appear after the first cloud reading.</div></div>
         <div class="chart-footer"><span id="power-range-start">—</span><span id="power-range-end">—</span></div>
       </section>
 
@@ -47,6 +65,18 @@
         <form id="controls-login" class="controls-login"><label for="controls-password">Control password</label><div class="login-row"><input id="controls-password" type="password" autocomplete="current-password" required><button type="submit">Sign in</button></div></form>
         <div id="controls-session" hidden><div class="controls-toolbar"><span id="controls-updated">—</span><button id="controls-refresh" class="ghost" type="button">Refresh settings</button></div><div id="controls-fields" class="controls-fields"></div></div>
         <p id="controls-message" class="controls-message" role="status" aria-live="polite"></p>
+      </section>
+      <section class="controls-panel farm-controls-panel" aria-labelledby="optics-title">
+        <div class="controls-heading"><div><div class="eyebrow">FARM CONTROLS · OPTICSRE</div><h2 id="optics-title">Main power settings</h2><p>Change the generator, main battery, inverter and solar controllers. OpticsRE may queue a change before the farm equipment applies it; refresh to check the result.</p></div><button id="optics-logout" class="ghost" type="button" hidden>Sign out</button></div>
+        <form id="optics-login" class="controls-login"><label for="optics-password">Farm control password</label><div class="login-row"><input id="optics-password" type="password" autocomplete="current-password" required><button type="submit">Sign in</button></div></form>
+        <div id="optics-content" hidden>
+          <div class="controls-toolbar"><span id="optics-updated">—</span><button id="optics-refresh" class="ghost" type="button">Refresh farm settings</button></div>
+          <div id="optics-quick" class="optics-quick"></div>
+          <div class="optics-tools"><label for="optics-search">Find a setting</label><input id="optics-search" type="search" placeholder="Search name, device or section"><span id="optics-count"></span></div>
+          <nav id="optics-categories" class="optics-categories" aria-label="Farm settings category"></nav>
+          <div id="optics-groups"></div>
+        </div>
+        <p id="optics-status" class="controls-message" role="status" aria-live="polite"></p>
       </section>
     </div>
   </main>

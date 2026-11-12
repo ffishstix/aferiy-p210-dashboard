@@ -121,6 +121,6 @@ test('month history groups samples into bounded time buckets', async () => {
   const result = await response.json();
   assert.equal(response.status, 200);
   assert.ok(sql.includes('GROUP BY'));
-  assert.equal(bindings[1], 1740);
+  assert.equal(bindings[2], 1740);
   assert.equal(result.bucketSeconds, 1740);
 });

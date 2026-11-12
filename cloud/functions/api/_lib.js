@@ -26,3 +26,15 @@ export async function readBody(request) {
   return JSON.parse(text);
 }
 
+export function historyWindow(url) {
+  const params = new URL(url).searchParams;
+  const from = params.get('from'), to = params.get('to');
+  if (from !== null || to !== null) {
+    const start = Date.parse(from || ''), end = Date.parse(to || '');
+    if (!Number.isFinite(start) || !Number.isFinite(end) || start >= end || end > Date.now() + 300000 || end - start > 720 * 3600000) return null;
+    return { from: new Date(start).toISOString(), to: new Date(end).toISOString(), hours: (end - start) / 3600000 };
+  }
+  const hours = Math.min(720, Math.max(1, Number(params.get('hours')) || 24));
+  return { from: new Date(Date.now() - hours * 3600000).toISOString(), to: new Date().toISOString(), hours };
+}
+

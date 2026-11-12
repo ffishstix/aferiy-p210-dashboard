@@ -11,6 +11,8 @@ internal sealed class DockForm : Form
     private readonly Label output = new();
     private readonly Label eta = new();
     private readonly Label updated = new();
+    private readonly Label farm = new();
+    private readonly Label farmDetail = new();
     private readonly Panel batteryFill = new();
     private readonly Panel batteryTrack = new();
     private readonly CheckBox startup = new();
@@ -28,7 +30,7 @@ internal sealed class DockForm : Form
         this.onControls = onControls;
         this.onUninstall = onUninstall;
         this.onStartup = onStartup;
-        Width = 372; Height = 528;
+        Width = 372; Height = 606;
         FormBorderStyle = FormBorderStyle.None;
         ShowInTaskbar = false;
         TopMost = true;
@@ -55,20 +57,25 @@ internal sealed class DockForm : Form
         eta.Font = new Font("Segoe UI Semibold", 12); eta.Bounds = new Rectangle(24, 324, 315, 28); Controls.Add(eta);
         updated.ForeColor = Color.FromArgb(151, 174, 178); updated.Bounds = new Rectangle(24, 354, 320, 22); Controls.Add(updated);
 
-        var controls = Button("Battery controls  →", 24, 391, 320, 39, onControls);
+        Controls.Add(SmallLabel("FARM POWER", 24, 390));
+        farm.Font = new Font("Segoe UI Semibold", 10); farm.Bounds = new Rectangle(24, 409, 320, 25); Controls.Add(farm);
+        farmDetail.ForeColor = Color.FromArgb(151, 174, 178); farmDetail.Bounds = new Rectangle(24, 433, 320, 25); Controls.Add(farmDetail);
+
+        var controls = Button("Battery controls  →", 24, 469, 320, 39, onControls);
         controls.BackColor = Color.FromArgb(184, 239, 143); controls.ForeColor = Color.FromArgb(19, 46, 34);
-        var web = Button("Open dashboard ↗", 24, 441, 178, 35, onWebsite);
-        var refresh = Button("Refresh", 212, 441, 132, 35, onRefresh);
+        var web = Button("Open dashboard ↗", 24, 519, 178, 35, onWebsite);
+        var refresh = Button("Refresh", 212, 519, 132, 35, onRefresh);
         Controls.AddRange([controls, web, refresh]);
         startup.Text = "Start with Windows"; startup.Checked = startupEnabled; startup.AutoSize = true;
-        startup.ForeColor = Color.FromArgb(165, 184, 185); startup.Location = new Point(24, 493);
+        startup.ForeColor = Color.FromArgb(165, 184, 185); startup.Location = new Point(24, 571);
         startup.CheckedChanged += (_, _) => { if (ready) onStartup(startup.Checked); };
         Controls.Add(startup);
-        var uninstall = Button("Uninstall", 266, 488, 78, 27, onUninstall);
+        var uninstall = Button("Uninstall", 266, 566, 78, 27, onUninstall);
         uninstall.ForeColor = Color.FromArgb(246, 167, 162);
         Controls.Add(uninstall);
         ready = true;
         UpdateReading(null, "offline", true);
+        UpdateFarm(null, false);
         Resize += (_, _) => RoundedWindow.Apply(this);
         HandleCreated += (_, _) => RoundedWindow.Apply(this);
         Deactivate += (_, _) => BeginInvoke(new Action(() => { if (!ContainsFocus) Hide(); }));
@@ -107,4 +114,16 @@ internal sealed class DockForm : Form
         batteryFill.Width = sample?.ChargePercent is double pct ? (int)Math.Round(320 * Math.Clamp(pct, 0, 100) / 100) : 0;
         batteryFill.BackColor = BatteryState.Colour(currentState);
     }
+
+    public void UpdateFarm(FarmSample? sample, bool live)
+    {
+        if (sample == null) { farm.Text = "Waiting for farm readings"; farmDetail.Text = "Main battery, solar and generator unavailable"; return; }
+        var generator = sample.GeneratorRunning == 0 ? "Off" : sample.GeneratorW is double power ? $"{power:0} W" : sample.GeneratorRunning == 1 ? "Running" : "—";
+        farm.Text = $"Solar {Watts(sample.SolarW)}  ·  Generator {generator}";
+        var charge = sample.MainChargePercent is double pct ? $"{pct:0}%" : sample.MainBatteryV is double volts ? $"{volts:0.0} V" : "—";
+        var flow = sample.MainBatteryW is double watts ? watts > 0 ? "charging" : watts < 0 ? "draining" : "balanced" : "flow unknown";
+        farmDetail.Text = $"Main battery {charge}, {flow}" + (live ? "" : " · old reading");
+    }
+
+    private static string Watts(double? value) => value is double watts ? $"{watts:0} W" : "—";
 }

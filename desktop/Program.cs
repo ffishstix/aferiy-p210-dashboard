@@ -50,6 +50,11 @@ internal static class Program
             if (BatteryState.Classify(new Sample { ChargePercent = 14, Discharging = 1, GridPresent = 0, RecordedAt = DateTimeOffset.UtcNow }) != "low") Environment.Exit(1);
             if (BatteryState.Classify(new Sample { InputW = 451, OutputW = 151, RecordedAt = DateTimeOffset.UtcNow }) != "charging") Environment.Exit(1);
             if (BatteryState.Classify(new Sample { InputW = 161, OutputW = 160, GridPresent = 1, RecordedAt = DateTimeOffset.UtcNow }) != "passthrough") Environment.Exit(1);
+            var fresh = DateTimeOffset.UtcNow;
+            if (PlugAdvice.Evaluate(new Sample { RecordedAt = fresh, Discharging = 1, AcInputW = 0 }, new FarmSample { RecordedAt = fresh, GeneratorRunning = 1, GeneratorW = 900, MainBatteryW = 100 }) != "on_generator") Environment.Exit(1);
+            if (PlugAdvice.Evaluate(new Sample { RecordedAt = fresh, AcInputW = 0 }, new FarmSample { RecordedAt = fresh, SolarW = 1500, MainBatteryW = 1250 }) != "on_solar") Environment.Exit(1);
+            if (PlugAdvice.Evaluate(new Sample { RecordedAt = fresh, AcInputW = 500 }, new FarmSample { RecordedAt = fresh, SolarW = 100, MainBatteryW = -200 }) != "off") Environment.Exit(1);
+            if (PlugAdvice.Evaluate(new Sample { RecordedAt = fresh.AddMinutes(-3), AcInputW = 500 }, new FarmSample { RecordedAt = fresh, MainBatteryW = -200 }) != null) Environment.Exit(1);
             ApplicationConfiguration.Initialize();
             using var view = new DockForm(() => { }, () => { }, () => { }, () => { }, _ => { }, false);
             view.UpdateReading(new Sample { ChargePercent = 29, InputW = 450, OutputW = 151, RecordedAt = DateTimeOffset.UtcNow }, "charging", false);
@@ -109,6 +114,42 @@ internal sealed class StatusResult
 {
     [JsonPropertyName("sample")] public Sample? Sample { get; set; }
     [JsonPropertyName("status")] public string? Status { get; set; }
+}
+
+internal sealed class FarmSample
+{
+    [JsonPropertyName("recorded_at")] public DateTimeOffset RecordedAt { get; set; }
+    [JsonPropertyName("solar_w")] public double? SolarW { get; set; }
+    [JsonPropertyName("generator_w")] public double? GeneratorW { get; set; }
+    [JsonPropertyName("generator_running")] public int? GeneratorRunning { get; set; }
+    [JsonPropertyName("main_charge_percent")] public double? MainChargePercent { get; set; }
+    [JsonPropertyName("main_battery_w")] public double? MainBatteryW { get; set; }
+    [JsonPropertyName("main_battery_v")] public double? MainBatteryV { get; set; }
+    [JsonPropertyName("load_w")] public double? LoadW { get; set; }
+    [JsonPropertyName("ac_source")] public string? AcSource { get; set; }
+}
+
+internal sealed class FarmStatusResult
+{
+    [JsonPropertyName("sample")] public FarmSample? Sample { get; set; }
+    [JsonPropertyName("status")] public string? Status { get; set; }
+}
+
+internal static class PlugAdvice
+{
+    public static string? Evaluate(Sample? aferiy, FarmSample? farm)
+    {
+        if (aferiy == null || farm == null || aferiy.RecordedAt == default || farm.RecordedAt == default) return null;
+        var now = DateTimeOffset.UtcNow;
+        if (now - aferiy.RecordedAt > TimeSpan.FromMinutes(2) || now - farm.RecordedAt > TimeSpan.FromMinutes(2)) return null;
+        // Leave at least 100 W charging the main bank before recommending the AFERIY charger.
+        if (aferiy.AcInputW is > 50 && farm.MainBatteryW is < 100) return "off";
+        if (aferiy.AcInputW is > 50) return null;
+        if (farm.GeneratorRunning == 1 && farm.GeneratorW is >= 400 && farm.MainBatteryW is >= 0 && aferiy.Discharging == 1) return "on_generator";
+        // The P210 can draw up to 1100 W; require that plus a 100 W reserve.
+        if (farm.SolarW is >= 1200 && farm.MainBatteryW is >= 1200) return "on_solar";
+        return null;
+    }
 }
 
 internal static class BatteryState
@@ -203,6 +244,9 @@ internal sealed class BatteryApp : ApplicationContext
     private bool updateChecking;
     private bool exiting;
     private bool pendingFresh;
+    private string? previousPlugAdvice;
+    private int plugAdviceStreak;
+    private DateTimeOffset lastPlugAlert;
 
     public BatteryApp()
     {
@@ -356,6 +400,15 @@ internal sealed class BatteryApp : ApplicationContext
         {
             var sample = await GetSampleAsync(fresh);
             Update(sample);
+            try
+            {
+                var farm = await client.GetFromJsonAsync<FarmStatusResult>($"/api/farm/status?at={DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()}");
+                dock.UpdateFarm(farm?.Sample, farm?.Status == "live");
+                UpdatePlugAdvice(PlugAdvice.Evaluate(sample, farm?.Status == "live" ? farm.Sample : null));
+            }
+            catch (HttpRequestException) { dock.UpdateFarm(null, false); UpdatePlugAdvice(null); }
+            catch (TaskCanceledException) { dock.UpdateFarm(null, false); UpdatePlugAdvice(null); }
+            catch (JsonException) { dock.UpdateFarm(null, false); UpdatePlugAdvice(null); }
             if (loginRequired && !prompted)
             {
                 prompted = true;
@@ -402,6 +455,20 @@ internal sealed class BatteryApp : ApplicationContext
         if (state is "offline" or "stale" && previousState is "discharging" or "low")
             Alert("P210 reading unavailable", "The last battery reading is old. Check the power station.", ToolTipIcon.Warning);
         previousState = state;
+    }
+
+    private void UpdatePlugAdvice(string? advice)
+    {
+        if (advice != previousPlugAdvice) { previousPlugAdvice = advice; plugAdviceStreak = 0; }
+        if (advice == null || ++plugAdviceStreak < 2 || DateTimeOffset.UtcNow - lastPlugAlert < TimeSpan.FromMinutes(30)) return;
+        lastPlugAlert = DateTimeOffset.UtcNow;
+        plugAdviceStreak = 0;
+        switch (advice)
+        {
+            case "on_generator": Alert("Turn on the AFERIY input plug", "The generator is supplying power while the AFERIY is draining. Turn on its charging plug.", ToolTipIcon.Info); break;
+            case "on_solar": Alert("Solar power available for AFERIY", "The main battery has enough solar charging headroom. Turn on the AFERIY input plug.", ToolTipIcon.Info); break;
+            case "off": Alert("Unplug the AFERIY input", "The AFERIY is charging while the main battery has little or no charging headroom. Turn off its input plug.", ToolTipIcon.Warning); break;
+        }
     }
 
     private void Alert(string title, string message, ToolTipIcon icon) => tray.ShowBalloonTip(10000, title, message, icon);

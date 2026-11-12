@@ -1,17 +1,17 @@
-import { json } from './_lib.js';
+import { historyWindow, json } from './_lib.js';
 export async function onRequestGet({ request, env }) {
-  const url = new URL(request.url);
-  const hours = Math.min(720, Math.max(1, Number(url.searchParams.get('hours')) || 24));
-  const since = new Date(Date.now() - hours * 3600000).toISOString();
+  const window = historyWindow(request.url);
+  if (!window) return json({ error: 'Choose a valid range of up to 30 days' }, 400);
+  const { hours, from, to } = window;
   const bucketSeconds = Math.max(60, Math.ceil(hours * 3600 / 1500 / 60) * 60);
   const rows = await env.DB.prepare(`SELECT MIN(recorded_at) AS recorded_at,
     AVG(charge_percent) AS charge_percent, AVG(input_w) AS input_w,
-    AVG(output_w) AS output_w, AVG(remaining_minutes) AS remaining_minutes,
-    AVG(json_extract(raw_json, '$.batteryVoltageV')) AS battery_voltage_v,
+    AVG(output_w) AS output_w, AVG(ac_input_w) AS ac_input_w, AVG(dc_input_w) AS dc_input_w,
+    AVG(remaining_minutes) AS remaining_minutes,
     MAX(grid_present) AS grid_present, MAX(discharging) AS discharging,
     MAX(fault) AS fault
-    FROM telemetry WHERE recorded_at >= ?
+    FROM telemetry WHERE recorded_at >= ? AND recorded_at <= ?
     GROUP BY CAST(strftime('%s', recorded_at) AS INTEGER) / ?
-    ORDER BY recorded_at ASC LIMIT 2000`).bind(since, bucketSeconds).all();
-  return json({ hours, bucketSeconds, samples: rows.results });
+    ORDER BY recorded_at ASC LIMIT 2000`).bind(from, to, bucketSeconds).all();
+  return json({ from, to, hours, bucketSeconds, samples: rows.results });
 }
